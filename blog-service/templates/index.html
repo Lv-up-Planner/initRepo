@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSA 블로그</title>
+    <link rel="stylesheet" href="/blog/static/css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1><a href="#/">MSA 기반 기술 블로그</a></h1>
+            <nav class="nav-actions">
+                <button class="btn" id="home-btn">홈</button>
+                <span id="auth-status">
+                    <button class="btn" id="login-btn">로그인</button>
+                </span>
+            </nav>
+        </header>
+        <main id="main-content">
+            </main>
+        <footer>
+            <p>&copy; 2025 Titanium Systems.</p>
+        </footer>
+    </div>
+
+    <template id="login-template">
+        <div class="view-container">
+            <h2>로그인</h2>
+            <form id="login-form" class="form-container">
+                <input type="text" id="username" placeholder="사용자 이름" required>
+                <input type="password" id="password" placeholder="비밀번호" required>
+                <button type="submit">로그인</button>
+                <button type="button" id="go-to-signup" class="secondary-btn">회원가입</button>
+                <p id="login-error" class="error-message"></p>
+            </form>
+        </div>
+    </template>
+
+    <template id="signup-template">
+        <div class="view-container">
+            <h2>회원가입</h2>
+            <form id="signup-form" class="form-container">
+                <input type="text" id="signup-username" placeholder="사용할 아이디" required>
+                <input type="email" id="signup-email" placeholder="이메일 (example@domain.com)" required>
+                <input type="password" id="signup-password" placeholder="사용할 비밀번호" required>
+                <button type="submit">계정 생성</button>
+                <button type="button" id="go-to-login" class="secondary-btn">로그인 페이지로</button>
+                <p id="signup-error" class="error-message"></p>
+            </form>
+        </div>
+    </template>
+
+    <template id="post-list-template">
+        <div class="view-container">
+            <h2>최신 글</h2>
+            <ul id="posts-container" class="post-list">
+                </ul>
+        </div>
+    </template>
+
+    <template id="post-detail-template">
+        <div id="post-detail-container" class="view-container post-detail">
+            </div>
+    </template>
+
+    <!-- 글 작성/수정 폼 템플릿 -->
+    <template id="post-form-template">
+        <div class="view-container">
+            <h2 id="post-form-title">글 작성</h2>
+            <form id="post-form" class="form-container">
+                <input type="text" id="post-title" placeholder="제목 (1~120자)" required maxlength="120">
+                <textarea id="post-content" placeholder="내용 (1~20000자)" required></textarea>
+                <button type="submit">저장</button>
+                <button type="button" id="post-cancel" class="secondary-btn">취소</button>
+                <p id="post-error" class="error-message"></p>
+            </form>
+        </div>
+    </template>
+
+    <script src="/blog/static/js/app.js"></script>
+</body>
+</html>

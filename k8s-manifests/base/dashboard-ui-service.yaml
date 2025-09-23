@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-ui-service
+  labels:
+    app: dashboard-ui
+spec:
+  type: ClusterIP
+  selector:
+    app: dashboard-ui
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: http
+    name: http
