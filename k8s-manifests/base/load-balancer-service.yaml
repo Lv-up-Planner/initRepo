@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: load-balancer-service
+  labels:
+    app: load-balancer
+spec:
+  type: ClusterIP
+  selector:
+    app: load-balancer
+  ports:
+  - protocol: TCP
+    port: 7100
+    targetPort: http
+    name: http

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 모니터링 대시보드</title>
+    <!-- 외부 라이브러리 로드 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <!-- <link rel="stylesheet" href="style.css"> -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; min-height: 100vh; padding: 20px; }
+        .dashboard-container { max-width: 1400px; margin: 0 auto; display: grid; gap: 20px; grid-template-columns: repeat(3, minmax(280px, 1fr)); }
+        /* 반응형: 화면이 줄어들면 2열, 1열로 정렬 */
+        @media (max-width: 1200px) {
+            .dashboard-container { grid-template-columns: repeat(2, minmax(260px, 1fr)); }
+        }
+        @media (max-width: 768px) {
+            .dashboard-container { grid-template-columns: 1fr; }
+        }
+        .header { grid-column: 1 / -1; text-align: center; padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 15px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; background: linear-gradient(45deg, #ff6b6b, #4ecdc4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .widget { background: rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .widget:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+        .widget h3 { margin-bottom: 15px; font-size: 1.3em; border-bottom: 2px solid rgba(255, 255, 255, 0.3); padding-bottom: 10px; }
+        .metric { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; }
+        .metric-value { font-size: 1.5em; font-weight: bold; }
+        .metric-good { color: #4ade80; } .metric-warning { color: #fbbf24; } .metric-danger { color: #f87171; }
+        .chart-container { position: relative; height: 300px; margin-top: 15px; }
+        .two-col-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+        @media (max-width: 768px) { .two-col-row { grid-template-columns: 1fr; } }
+        .status-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .status-healthy { background-color: #4ade80; } .status-warning { background-color: #fbbf24; } .status-error { background-color: #f87171; }
+        .server-list, .alerts-container { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
+        .server-item, .alert-box { padding: 10px; margin-bottom: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; }
+        .server-item { display: flex; justify-content: space-between; align-items: center; }
+        .alert-box { border-left: 4px solid; }
+        .alert-box.info { border-color: #3b82f6; } .alert-box.warning { border-color: #fbbf24; } .alert-box.error { border-color: #f87171; }
+        .controls { display: flex; gap: 10px; margin-bottom: 15px; }
+        .control-btn { padding: 8px 16px; background: rgba(255, 255, 255, 0.2); border: none; border-radius: 5px; color: white; cursor: pointer; transition: background 0.3s ease; }
+        .control-btn:hover { background: rgba(255, 255, 255, 0.3); }
+        .control-btn.active { background: #4ade80; }
+        .logs-container { height: 200px; overflow-y: auto; background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px; font-family: 'Courier New', monospace; font-size: 0.9em; }
+        .log-entry { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>실시간 모니터링 대시보드</h1>
+            <p>마이크로서비스 클러스터 통합 모니터링</p>
+            <div style="margin-top: 10px;">
+                <span id="current-time"></span> | <span id="uptime">Uptime: 00:00:00</span>
+            </div>
+        </div>
+
+        <div class="widget">
+            <h3>시스템 현황</h3>
+            <div class="controls">
+                <button id="toggle-monitoring-btn" class="control-btn active">모니터링 ON</button>
+                <button id="refresh-btn" class="control-btn">새로고침</button>
+                <button id="toggle-ws-heartbeat-btn" class="control-btn">WS 하트비트 OFF</button>
+            </div>
+            <div class="metric"><span>전체 상태</span><span class="metric-value metric-good" id="overall-status">INITIALIZING</span></div>
+            <div class="metric"><span>활성 서비스</span><span class="metric-value" id="active-services">0/0</span></div>
+            <div class="metric"><span>현재 RPS</span><span class="metric-value" id="current-rps">0</span></div>
+            <div class="metric"><span>평균 응답시간</span><span class="metric-value" id="avg-response-time">0ms</span></div>
+        </div>
+
+        <div class="widget">
+            <h3>서비스별 상태</h3>
+            <ul class="server-list" id="server-list"></ul>
+        </div>
+
+        <div class="widget">
+            <h3>데이터 저장소 상태</h3>
+            <div class="metric"><span>데이터베이스</span><span class="metric-value metric-good" id="db-status">N/A</span></div>
+            <div class="metric"><span>캐시</span><span class="metric-value" id="cache-status">N/A</span></div>
+        </div>
+
+        <div class="widget" style="grid-column: 1 / -1;"><h3>처리량 (RPS) 및 응답 시간 추이</h3><div class="chart-container"><canvas id="throughputChart"></canvas></div></div>
+
+        <div class="two-col-row" style="grid-column: 1 / -1;">
+            <div class="widget">
+                <h3>알람 및 이벤트</h3>
+                <ul class="alerts-container" id="alerts-container"></ul>
+            </div>
+            <div class="widget">
+                <h3>Load Balancer 로그</h3>
+                <div class="logs-container" id="logs-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js" type="module"></script>
+</body>
+</html>
