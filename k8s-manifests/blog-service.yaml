@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blog-service
+  template:
+    metadata:
+      labels:
+        app: blog-service
+    spec:
+      containers:
+        - name: blog-service
+          image: blog-service
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: BLOG_DATABASE_PATH
+              value: /data/blog.db
+          ports:
+            - containerPort: 8005
+          volumeMounts:
+            - name: blog-data
+              mountPath: /data
+      volumes:
+        - name: blog-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blog-service
+spec:
+  selector:
+    app: blog-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8005
+  type: ClusterIP
