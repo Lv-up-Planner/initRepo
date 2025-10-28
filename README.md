@@ -71,7 +71,7 @@ skaffold dev
 ```
 
 - `k8s-manifests/blog-service.yaml`에는 Deployment와 ClusterIP Service가 포함되어 있습니다.
-- 필요에 따라 `NodePort` 또는 `Ingress` 리소스를 추가해 외부 접근을 구성하세요.
+- 외부 접속은 `kubectl port-forward svc/blog-service 8005:80`로 열거나, minikube를 사용한다면 `minikube service blog-service --url`로 전달된 URL을 사용하면 됩니다.
 
 ## 변경 요약
 
