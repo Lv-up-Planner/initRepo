@@ -24,20 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
         '/posts/:id/edit': 'post-form-template'
     };
 
-    // JWT helpers
+    // 인증 헬퍼
     const getToken = () => sessionStorage.getItem('authToken') || '';
-    const parseJwt = (t) => {
-        try {
-            const base = t.split('.')[1];
-            const b = atob(base.replace(/-/g,'+').replace(/_/g,'/'));
-            return JSON.parse(b);
-        } catch { return null; }
+    const getCurrentUser = () => sessionStorage.getItem('authUser') || '';
+    const authHeader = () => {
+        const token = getToken();
+        return token ? { 'Authorization': `Bearer ${token}` } : {};
     };
-    const getUsernameFromToken = () => {
-        const p = parseJwt(getToken());
-        return (p && p.username) ? p.username : '';
-    };
-    const authHeader = () => ({ 'Authorization': `Bearer ${getToken()}` });
 
     const renderTemplate = (templateId, container) => {
         const template = document.getElementById(templateId);
@@ -101,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (logoutBtn) logoutBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('authUser');
                 window.location.href = '/blog/';
             });
         } else {
@@ -132,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 if (response.ok) {
                     sessionStorage.setItem('authToken', data.token);
+                    sessionStorage.setItem('authUser', data.username || username);
                     window.location.hash = '/';
                 } else {
                     errorEl.textContent = data.error || '로그인 실패';
@@ -205,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await fetch(`/api/posts/${id}`);
                 if (!res.ok) throw new Error('load failed');
                 const post = await res.json();
-                if (getUsernameFromToken() !== post.author) { alert('작성자만 수정할 수 있습니다.'); window.location.hash = `#/posts/${id}`; return; }
+                if (getCurrentUser() !== post.author) { alert('작성자만 수정할 수 있습니다.'); window.location.hash = `#/posts/${id}`; return; }
                 titleEl.value = post.title;
                 contentEl.value = post.content;
             } catch (_) { errorEl.textContent = '게시물을 불러오지 못했습니다.'; }
@@ -281,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="content">${post.content.replace(/\n/g, '<br>')}</div>
             `;
             // 작성자에게만 수정/삭제 버튼 제공
-            if (getToken() && getUsernameFromToken() === post.author) {
+            if (getToken() && getCurrentUser() === post.author) {
                 const actions = document.getElementById('post-actions');
                 actions.innerHTML = `
                     <button class="btn btn-outline" id="edit-post-btn">수정</button>
