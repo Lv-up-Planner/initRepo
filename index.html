@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lv-Up Planner - UI Mockup (v2.1 - BugFix)</title>
+    <!-- Tailwind CSS 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Inter 폰트 적용 (Tailwind 기본 폰트와 유사) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+        }
+        /* 페이지 전환을 위한 기본 숨김 처리 */
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        /* 간단한 레벨업 플래시 효과 */
+        .level-up-flash {
+            animation: flash 1.5s ease-out;
+        }
+        @keyframes flash {
+            0% { box-shadow: 0 0 0 0px rgba(76, 201, 240, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(76, 201, 240, 0); }
+            100% { box-shadow: 0 0 0 0px rgba(76, 201, 240, 0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- === 글로벌 네비게이션 === -->
+    <nav id="global-nav" class="bg-white shadow-md mb-8 hidden">
+        <div class="container mx-auto max-w-5xl px-4 py-4 flex justify-between items-center">
+            <div class="text-xl font-bold text-gray-800">🚀 To-Do Quest</div>
+            <div>
+                <button onclick="showPage('page-dashboard')" class="text-gray-600 px-3 py-2 rounded-md font-semibold hover:bg-gray-200 transition duration-200">
+                    대시보드
+                </button>
+                <button onclick="showPage('page-history')" class="text-gray-600 px-3 py-2 rounded-md font-semibold hover:bg-gray-200 transition duration-200">
+                    완료 내역
+                </button>
+                <button onclick="showPage('page-leaderboard')" class="text-gray-600 px-3 py-2 rounded-md font-semibold hover:bg-gray-200 transition duration-200">
+                    순위표
+                </button>
+                <button onclick="showPage('page-profile')" class="text-gray-600 px-3 py-2 rounded-md font-semibold hover:bg-gray-200 transition duration-200">
+                    내 프로필
+                </button>
+                <button onclick="showPage('page-login'); hideNav();" class="ml-2 text-red-500 px-4 py-2 rounded-md font-semibold hover:bg-red-100 transition duration-200">
+                    로그아웃
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- === 페이지 컨테이너 === -->
+    <div class="container mx-auto max-w-5xl px-4 pb-12">
+
+        <!-- ======================================================= -->
+        <!-- 1. 로그인 / 회원가입 페이지 (Authentication Domain)     -->
+        <!-- ======================================================= -->
+        <div id="page-login" class="page active">
+            <div class="flex justify-center items-center min-h-screen -mt-16">
+                <div class="w-full max-w-md">
+                    
+                    <!-- 로그인 폼 -->
+                    <div id="login-form" class="bg-white p-8 rounded-xl shadow-lg">
+                        <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">로그인</h2>
+                        <form onsubmit="event.preventDefault(); showNav();">
+                            <div class="mb-4">
+                                <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+                                <input type="email" id="login-email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="user@example.com">
+                            </div>
+                            <div class="mb-6">
+                                <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
+                                <input type="password" id="login-password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="1234">
+                            </div>
+                            <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-600 transition duration-200">
+                                퀘스트 시작!
+                            </button>
+                        </form>
+                        <p class="text-center text-sm text-gray-600 mt-6">
+                            계정이 없으신가요? 
+                            <button onclick="toggleAuthForm(false)" class="text-blue-500 hover:underline font-medium">회원가입</button>
+                        </p>
+                    </div>
+
+                    <!-- 회원가입 폼 -->
+                    <div id="register-form" class="bg-white p-8 rounded-xl shadow-lg hidden">
+                        <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">회원가입</h2>
+                        <form onsubmit="event.preventDefault(); toggleAuthForm(true);">
+                            <div class="mb-4">
+                                <label for="reg-email" class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+                                <input type="email" id="reg-email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label for="reg-password" class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
+                                <input type="password" id="reg-password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label for="reg-nickname" class="block text-sm font-medium text-gray-700 mb-1">닉네임</label>
+                                <input type="text" id="reg-nickname" placeholder="예: 열정적인 모험가" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">캐릭터 성별</label>
+                                <div class="flex justify-around">
+                                    <label class="flex items-center space-x-2 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 cursor-pointer">
+                                        <input type="radio" name="gender" value="male" class="text-blue-500 focus:ring-blue-400">
+                                        <span>👨 남성</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 cursor-pointer">
+                                        <input type="radio" name="gender" value="female" class="text-pink-500 focus:ring-pink-400">
+                                        <span>👩 여성</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full bg-green-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-600 transition duration-200">
+                                여정 시작하기
+                            </button>
+                        </form>
+                        <p class="text-center text-sm text-gray-600 mt-6">
+                            이미 계정이 있으신가요? 
+                            <button onclick="toggleAuthForm(true)" class="text-blue-500 hover:underline font-medium">로그인</button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- 2. 메인 대시보드 (Todo Domain + Gamification Domain)     -->
+        <!-- ======================================================= -->
+        <div id="page-dashboard" class="page">
+            
+            <!-- 캐릭터 상태 -->
+            <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-sm font-medium text-gray-500">Lv. <span id="user-level">2</span></span>
+                        <h3 id="user-nickname" class="text-2xl font-bold text-gray-800">열정적인 모험가 (👨)</h3>
+                    </div>
+                    <div class="text-sm font-semibold text-gray-600">
+                        <span id="user-xp">10</span> / <span id="user-next-xp">120</span> XP
+                    </div>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 mt-4 overflow-hidden">
+                    <div id="xp-bar" class="bg-blue-500 h-4 rounded-full transition-all duration-500" style="width: 8.33%;"></div>
+                </div>
+            </div>
+
+            <!-- 통계 요약 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-xl shadow-lg flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-medium text-gray-500">오늘 획득 XP</div>
+                        <div class="text-2xl font-bold text-green-600">+110 XP</div>
+                    </div>
+                    <div class="text-3xl">☀️</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-lg flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-medium text-gray-500">이번 주 획득 XP</div>
+                        <div class="text-2xl font-bold text-indigo-600">+350 XP</div>
+                    </div>
+                    <div class="text-3xl">📅</div>
+                </div>
+            </div>
+
+            <!-- 퀘스트 등록 -->
+            <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">새 퀘스트 추가</h3>
+                <form onsubmit="event.preventDefault();" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <div class="flex-grow">
+                        <label for="todo-title" class="block text-sm font-medium text-gray-700 mb-1">퀘스트 내용</label>
+                        <input type="text" id="todo-title" placeholder="예: 알고리즘 문제 풀기" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="todo-category" class="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+                        <select id="todo-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="study">📚 공부</option>
+                            <option value="health">🏃 건강</option>
+                            <option value="work">💼 업무</option>
+                            <option value="hobby">🎨 취미</option>
+                            <option value="etc">🧹 기타</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="todo-xp" class="block text-sm font-medium text-gray-700 mb-1">보상 (XP)</label>
+                        <input type="number" id="todo-xp" value="20" min="5" max="100" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="todo-due-date" class="block text-sm font-medium text-gray-700 mb-1">마감일 (선택)</label>
+                        <input type="date" id="todo-due-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <button type="submit" class="w-full bg-green-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-600 transition duration-200 h-10">
+                            퀘스트 수락
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 퀘스트 목록 -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">오늘의 퀘스트 (2)</h3>
+                <ul class="space-y-4">
+                    
+                    <li class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">📚 공부</span>
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600">D-1: 10/30</span>
+                            </div>
+                            <span class="font-semibold text-gray-800">알고리즘 문제 풀기</span>
+                            <span class="text-sm text-blue-600 font-medium ml-2">+20 XP</span>
+                        </div>
+                        <div class="flex space-x-2 flex-shrink-0">
+                            <button onclick="showModal(true, '알고리즘 문제 풀기', 'study', 20, '2025-10-30')" class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold hover:bg-yellow-200">수정</button>
+                            <form onsubmit="event.preventDefault();"><button type="submit" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold hover:bg-blue-200">완료</button></form>
+                            <form onsubmit="event.preventDefault();"><button type="submit" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-semibold hover:bg-gray-200">삭제</button></form>
+                        </div>
+                    </li>
+                    
+                    <li class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-600">🏃 건강</span>
+                            </div>
+                            <span class="font-semibold text-gray-800">물 마시기</span>
+                            <span class="text-sm text-green-600 font-medium ml-2">+10 XP</span>
+                        </div>
+                        <div class="flex space-x-2 flex-shrink-0">
+                            <button onclick="showModal(true, '물 마시기', 'health', 10, '')" class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold hover:bg-yellow-200">수정</button>
+                            <form onsubmit="event.preventDefault();"><button type="submit" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold hover:bg-blue-200">완료</button></form>
+                            <form onsubmit="event.preventDefault();"><button type="submit" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-semibold hover:bg-gray-200">삭제</button></form>
+                        </div>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- 3. 순위표 페이지 (Leaderboard)                          -->
+        <!-- ======================================================= -->
+        <div id="page-leaderboard" class="page">
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">🏆 명예의 전당 🏆</h2>
+                <ul class="space-y-4">
+                    <li class="flex items-center justify-between p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                        <div class="flex items-center space-x-4"><span class="text-2xl font-bold text-yellow-500">🥇 1</span><div><div class="font-bold text-lg text-gray-800">DragonSlayer (👨)</div><div class="text-sm text-gray-600">Lv. 15</div></div></div><div class="text-lg font-semibold text-yellow-600">50 / 1500 XP</div>
+                    </li>
+                    <li class="flex items-center justify-between p-4 bg-gray-200 border-2 border-gray-300 rounded-lg">
+                        <div class="flex items-center space-x-4"><span class="text-2xl font-bold text-gray-500">🥈 2</span><div><div class="font-bold text-lg text-gray-800">박지수 (👩)</div><div class="text-sm text-gray-600">Lv. 3</div></div></div><div class="text-lg font-semibold text-gray-700">50 / 150 XP</div>
+                    </li>
+                    <li class="flex items-center justify-between p-4 bg-orange-50 border-2 border-orange-300 rounded-lg">
+                        <div class="flex items-center space-x-4"><span class="text-2xl font-bold text-orange-500">🥉 3</span><div><div class="font-bold text-lg text-gray-800">StudyHard (👩)</div><div class="text-sm text-gray-600">Lv. 2</div></div></div><div class="text-lg font-semibold text-orange-600">110 / 120 XP</div>
+                    </li>
+                    <li class="flex items-center justify-between p-4 bg-blue-50 border-2 border-blue-400 rounded-lg ring-4 ring-blue-200">
+                        <div class="flex items-center space-x-4"><span class="text-2xl font-bold text-blue-500">4</span><div><div class="font-bold text-lg text-blue-800">열정적인 모험가 (👨) (나)</div><div class="text-sm text-gray-600">Lv. 2</div></div></div><div class="text-lg font-semibold text-blue-600">10 / 120 XP</div>
+                    </li>
+                    <li class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
+                        <div class="flex items-center space-x-4"><span class="text-2xl font-bold text-gray-400">5</span><div><div class="font-bold text-lg text-gray-800">Walker (👨)</div><div class="text-sm text-gray-600">Lv. 1</div></div></div><div class="text-lg font-semibold text-gray-600">50 / 100 XP</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- ======================================================= -->
+        <!-- 4. [신규] 완료 내역 페이지 (요구사항: 완료 히스토리)      -->
+        <!-- ======================================================= -->
+        <div id="page-history" class="page">
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">📜 완료된 퀘스트</h2>
+                
+                <!-- 필터링 UI -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <label for="filter-category" class="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+                        <select id="filter-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="all">모두</option>
+                            <option value="study">📚 공부</option>
+                            <option value="health">🏃 건강</option>
+                            <option value="work">💼 업무</option>
+                            <option value="hobby">🎨 취미</option>
+                            <option value="etc">🧹 기타</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">완료 날짜</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <span class="text-gray-600">-</span>
+                            <input type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="space-y-4">
+                    <!-- 완료된 아이템 -->
+                    <li class="flex items-center justify-between p-4 bg-gray-100 rounded-lg border border-gray-200 opacity-80">
+                        <div>
+                            <span class="font-semibold text-gray-600 line-through">알고리즘 문제 풀기</span>
+                            <span class="text-sm text-blue-500 font-medium ml-2">+20 XP</span>
+                            <span class="text-xs text-gray-500 ml-4">(완료: 10/28)</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <form onsubmit="event.preventDefault();"><button type="submit" class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-semibold hover:bg-gray-300">복구</button></form>
+                        </div>
+                    </li>
+                    <li class="flex items-center justify-between p-4 bg-gray-100 rounded-lg border border-gray-200 opacity-80">
+                        <div>
+                            <span class="font-semibold text-gray-600 line-through">물 마시기</span>
+                            <span class="text-sm text-green-500 font-medium ml-2">+10 XP</span>
+                            <span class="text-xs text-gray-500 ml-4">(완료: 10/28)</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <form onsubmit="event.preventDefault();"><button type="submit" class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-semibold hover:bg-gray-300">복구</button></form>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- 5. [신규] 내 프로필 페이지 (요구사항: 프로필 수정, 회원 탈퇴) -->
+        <!-- ======================================================= -->
+        <div id="page-profile" class="page">
+            <!-- 프로필 수정 폼 -->
+            <div class="bg-white p-8 rounded-xl shadow-lg mb-6">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">⚙️ 내 프로필 수정</h2>
+                <form onsubmit="event.preventDefault();" class="space-y-6">
+                    <div>
+                        <label for="profile-email" class="block text-sm font-medium text-gray-700 mb-1">이메일 (변경 불가)</label>
+                        <input type="email" id="profile-email" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500" value="user@example.com">
+                    </div>
+                    <div>
+                        <label for="profile-nickname" class="block text-sm font-medium text-gray-700 mb-1">닉네임</label>
+                        <input type="text" id="profile-nickname" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="열정적인 모험가">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">캐릭터 성별</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center space-x-2 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 cursor-pointer">
+                                <input type="radio" name="profile-gender" value="male" class="text-blue-500 focus:ring-blue-400" checked>
+                                <span>👨 남성</span>
+                            </label>
+                            <label class="flex items-center space-x-2 p-3 rounded-lg border border-gray-300 hover:bg-gray-50 cursor-pointer">
+                                <input type="radio" name="profile-gender" value="female" class="text-pink-500 focus:ring-pink-400">
+                                <span>👩 여성</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="profile-avatar" class="block text-sm font-medium text-gray-700 mb-1">아바타 URL (선택)</label>
+                        <input type="url" id="profile-avatar" placeholder="https://..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-600 transition duration-200">
+                        프로필 저장
+                    </button>
+                </form>
+            </div>
+
+            <!-- 위험 구역 (회원 탈퇴) -->
+            <div class="bg-white p-8 rounded-xl shadow-lg border-2 border-red-300">
+                <h3 class="text-2xl font-bold text-red-600 mb-4">위험 구역</h3>
+                <div class="flex flex-col md:flex-row md:items-center justify-between">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">회원 탈퇴</h4>
+                        <p class="text-sm text-gray-600 mt-1">계정을 삭제하면 모든 퀘스트와 레벨 정보가 영구적으로 삭제됩니다.</p>
+                    </div>
+                    <button onclick="alert('회원 탈퇴 처리됨 (UI 목업)')" class="mt-4 md:mt-0 bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition duration-200 flex-shrink-0">
+                        계정 영구 삭제
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- === End of Page Container === -->
+
+
+    <!-- ======================================================= -->
+    <!-- [수정됨] 퀘스트 수정 모달 ('page' 클래스 제거, 'hidden' 추가) -->
+    <!-- ======================================================= -->
+    <div id="edit-quest-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-lg">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">퀘스트 수정</h3>
+            
+            <form onsubmit="event.preventDefault(); showModal(false);" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label for="modal-title" class="block text-sm font-medium text-gray-700 mb-1">퀘스트 내용</label>
+                    <input type="text" id="modal-title" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="modal-category" class="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+                    <select id="modal-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="study">📚 공부</option>
+                        <option value="health">🏃 건강</option>
+                        <option value="work">💼 업무</option>
+                        <option value="hobby">🎨 취미</option>
+                        <option value="etc">🧹 기타</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="modal-xp" class="block text-sm font-medium text-gray-700 mb-1">보상 (XP)</label>
+                    <input type="number" id="modal-xp" min="5" max="100" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="modal-due-date" class="block text-sm font-medium text-gray-700 mb-1">마감일 (선택)</label>
+                    <input type="date" id="modal-due-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- 모달 버튼 -->
+                <div class="md:col-span-2 flex justify-end gap-4 mt-4">
+                    <button type="button" onclick="showModal(false)" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-semibold hover:bg-gray-300">
+                        취소
+                    </button>
+                    <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-600">
+                        저장하기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- === 페이지 전환용 스크립트 (UI 목업 전용) === -->
+    <script>
+        const pages = document.querySelectorAll('.page');
+        const nav = document.getElementById('global-nav');
+        const modal = document.getElementById('edit-quest-modal');
+        
+        // 모달 필드
+        const modalTitle = document.getElementById('modal-title');
+        const modalCategory = document.getElementById('modal-category');
+        const modalXp = document.getElementById('modal-xp');
+        const modalDueDate = document.getElementById('modal-due-date');
+
+        function showPage(pageId) {
+            pages.forEach(page => {
+                // [수정됨] 모달 예외처리 로직 제거 (이제 'pages'에 포함되지 않음)
+                if (page.id === pageId) {
+                    page.classList.add('active');
+                } else {
+                    page.classList.remove('active');
+                }
+            });
+            window.scrollTo(0, 0); // 페이지 전환 시 상단으로 스크롤
+
+            // 네비게이션 버튼 활성화 스타일
+            document.querySelectorAll('#global-nav button').forEach(btn => {
+                if (btn.onclick && btn.onclick.toString().includes(`showPage('${pageId}')`)) {
+                    btn.classList.add('bg-blue-500', 'text-white');
+                    btn.classList.remove('text-gray-600', 'hover:bg-gray-200');
+                } else {
+                    btn.classList.remove('bg-blue-500', 'text-white');
+                    // 로그아웃 버튼은 제외
+                    if (btn.onclick && !btn.onclick.toString().includes('page-login')) {
+                        btn.classList.add('text-gray-600', 'hover:bg-gray-200');
+                    }
+                }
+            });
+        }
+
+        function toggleAuthForm(showLogin) {
+            document.getElementById('login-form').classList.toggle('hidden', !showLogin);
+            document.getElementById('register-form').classList.toggle('hidden', showLogin);
+        }
+
+        function showNav() {
+            nav.classList.remove('hidden');
+            showPage('page-dashboard'); // 로그인 성공 시 대시보드로 이동
+        }
+        function hideNav() {
+            nav.classList.add('hidden');
+        }
+
+        /**
+         * [수정됨] 퀘스트 수정 모달 표시/숨김 함수 (hidden 클래스 토글)
+         */
+        function showModal(show, title, category, xp, dueDate) {
+            if (show) {
+                // (실제 앱) 클릭한 퀘스트의 데이터로 폼을 채웁니다.
+                modalTitle.value = title || '';
+                modalCategory.value = category || 'etc';
+                modalXp.value = xp || 10;
+                modalDueDate.value = dueDate || '';
+                
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // 초기 페이지 설정
+        showPage('page-login');
+        // showModal(false); // [수정됨] 모달은 이제 'hidden'이 기본값이므로 명시적으로 숨길 필요 없음
+    </script>
+</body>
+</html>
