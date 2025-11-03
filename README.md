@@ -1,3 +1,106 @@
+# Lv-Up Planner — 개발 가이드
+
+로컬에서 이 프로젝트를 개발·실행하기 위한 최소한의 가이드입니다. 아래 절차를 따르면 빠르게 개발 서버를 띄우고 브라우저에서 SPA를 확인할 수 있습니다.
+## 요구사항
+
+- Python 3.10+
+- Docker (선택: 로컬 컨테이너 실행용)
+## 1) 저장소 복제
+
+```bash
+git clone https://github.com/Lv-up-Planner/initRepo.git
+cd initRepo
+```
+## 2) 가상환경 생성 (권장)
+
+macOS / Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r blog-service/requirements.txt
+```
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install --upgrade pip
+pip install -r blog-service/requirements.txt
+```
+## 3) 환경 변수(.env)
+
+개발 시 필요한 최소 환경 변수는 `.env` 또는 쉘에서 직접 설정할 수 있습니다. 레포에 `.env.example`가 있으니 복사해서 사용하세요.
+
+```bash
+cp .env.example .env
+# 필요 시 값 수정
+```
+기본값 요약 (`.env.example` 참고):
+
+- BLOG_DATABASE_PATH=/data/blog.db
+- TOKEN_EXP_DAYS=30
+- HOST=0.0.0.0
+- PORT=8005
+
+> 주의: 실제 비밀(토큰, 외부 API 키 등)은 `.env`에 직접 커밋하지 마세요. `.gitignore`에 이미 `.env`가 포함되어 있습니다.
+## 4) 로컬에서 직접 실행 (개발용)
+
+프로젝트 루트에서 FastAPI 앱을 직접 실행할 수 있습니다 (가상환경 활성화 필요).
+
+```bash
+# 앱 디렉토리에서 실행할 수도 있고 프로젝트 루트에서 --app-dir 사용합니다
+cd blog-service
+BLOG_DATABASE_PATH=blog.db ../.venv/bin/uvicorn blog_service:app --host 127.0.0.1 --port 8005 --reload
+```
+브라우저에서: http://localhost:8005/blog/
+
+## 5) Docker Compose로 실행 (권장: 배포/테스트)
+
+Docker가 설치되어 있으면 `run-deploy.sh`를 사용해 빌드·기동할 수 있습니다.
+
+```bash
+# .env가 없으면 run-deploy.sh가 .env.example을 복사합니다
+bash run-deploy.sh
+# 또는 수동
+docker compose build --pull --no-cache
+docker compose up -d
+
+# 로그 보기
+docker compose logs -f blog-service
+```
+서비스 헬스 체크: `http://localhost:8005/health` (200 OK)
+
+## 6) 주요 파일/구조
+
+- `blog-service/blog_service.py` — FastAPI 앱 엔트리포인트 (엔드포인트: /api/register, /api/login, /api/profile, /api/todos 등)
+- `blog-service/templates/index.html` — SPA 템플릿
+- `blog-service/static/js/app.js` — 클라이언트 통신 로직
+- `docker-compose.yml` — 로컬/서버 배포용 설정
+
+## 7) 간단한 테스트
+
+로그인(샘플): `admin@example.com` / `password123` (샘플 데이터는 스타트업에 삽입됩니다)
+
+간단한 curl 예시:
+
+```bash
+# 로그인
+curl -s -X POST http://localhost:8005/api/login -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"password123"}' | jq
+
+# 로그인 토큰을 받아 투두 조회
+TOKEN=$(curl -s -X POST http://localhost:8005/api/login -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"password123"}' | jq -r .token)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8005/api/todos | jq
+```
+## 8) 다음 권장 작업
+
+- 간단한 자동화 테스트(pytest+httpx) 추가
+- GitHub Actions로 CI(빌드/테스트) 구성
+- 운영 환경에서 비밀번호 해시(scrypt/bcrypt) 사용 검토
+
+필요하시면 제가 README에 추가 항목(예: API 상세, 개발 컨벤션)이나 CI 템플릿을 더 작성해 드리겠습니다.
+
 ````markdown
 # Lv-Up Planner — Blog & Gamified Todo Service
 
