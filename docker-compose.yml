@@ -7,10 +7,18 @@ services:
     container_name: blog-service
     environment:
       - BLOG_DATABASE_PATH=/data/blog.db
+      - TOKEN_EXP_DAYS=30
+      - PYTHONUNBUFFERED=1
     ports:
       - "8005:8005"
     volumes:
       - blog_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8005/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   blog_data:

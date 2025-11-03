@@ -1,3 +1,234 @@
+// Minimal frontend integration for MVP: login, register, profile, todos, complete
+(function(){
+  const apiBase = '/api';
+
+  function apiFetch(path, opts={}){
+    const token = sessionStorage.getItem('token');
+    const headers = opts.headers || {};
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+    if(token){ headers['Authorization'] = `Bearer ${token}`; }
+    return fetch(path, {...opts, headers}).then(async res => {
+      const text = await res.text();
+      let json = null;
+      try{ json = text ? JSON.parse(text) : null; }catch(e){ json = text; }
+      if(!res.ok){ const err = json || {error: res.statusText}; throw err; }
+      return json;
+    });
+  }
+
+  // Login form
+  const loginForm = document.querySelector('#login-form form') || document.querySelector('#login-form');
+  if(loginForm){
+    loginForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      try{
+        const r = await apiFetch(`${apiBase}/login`, { method: 'POST', body: JSON.stringify({email, password}) });
+                sessionStorage.setItem('token', r.token);
+                if(r.user_id) sessionStorage.setItem('user_id', r.user_id);
+        await loadProfile();
+        showNav();
+        showPage('page-dashboard');
+      }catch(err){ console.error(err); alert(err.error || JSON.stringify(err)); }
+    });
+  }
+
+  // Register form
+  const regForm = document.querySelector('#register-form form') || document.querySelector('#register-form');
+  if(regForm){
+    regForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email = document.getElementById('reg-email').value;
+      const password = document.getElementById('reg-password').value;
+      const display_name = document.getElementById('reg-nickname').value;
+      const genderEl = document.querySelector('#register-form input[name="gender"]:checked');
+      const gender = genderEl ? genderEl.value : 'other';
+      try{
+        const r = await apiFetch(`${apiBase}/register`, { method: 'POST', body: JSON.stringify({email, password, display_name, gender}) });
+                sessionStorage.setItem('token', r.token);
+                if(r.user_id) sessionStorage.setItem('user_id', r.user_id);
+        await loadProfile();
+        showNav();
+        showPage('page-dashboard');
+      }catch(err){ console.error(err); alert(err.error || JSON.stringify(err)); }
+    });
+  }
+
+  // Todo create
+  const todoForm = document.querySelector('#page-dashboard form');
+  if(todoForm){
+    todoForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const title = document.getElementById('todo-title').value;
+      const category = document.getElementById('todo-category').value || 'etc';
+      const xp_reward = parseInt(document.getElementById('todo-xp').value || '10', 10);
+      const due_date = document.getElementById('todo-due-date').value || null;
+      try{
+        await apiFetch(`${apiBase}/todos`, { method: 'POST', body: JSON.stringify({ title, description: '', category, xp_reward, due_date }) });
+        await loadTodos();
+        document.getElementById('todo-title').value = '';
+      }catch(err){ console.error(err); alert(err.error || JSON.stringify(err)); }
+    });
+  }
+
+  async function loadProfile(){
+    try{
+      const p = await apiFetch(`${apiBase}/profile/me`);
+      // update UI
+      const levelEl = document.getElementById('user-level');
+      const nickEl = document.getElementById('user-nickname');
+      const xpEl = document.getElementById('user-xp');
+      const nextXpEl = document.getElementById('user-next-xp');
+      const xpBar = document.getElementById('xp-bar');
+      if(levelEl) levelEl.innerText = p.level;
+      if(nickEl) nickEl.innerText = `${p.display_name} (${p.gender === 'male' ? '👨' : p.gender === 'female' ? '👩' : ''})`;
+      if(xpEl) xpEl.innerText = p.current_xp;
+      if(nextXpEl) nextXpEl.innerText = p.next_level_xp;
+      if(xpBar && p.next_level_xp){
+        const pct = Math.round((p.current_xp / p.next_level_xp) * 100);
+        xpBar.style.width = (Math.max(0, Math.min(100, pct))) + '%';
+      }
+            // populate profile form fields if present
+            try{
+                const emailEl = document.getElementById('profile-email');
+                const nickInput = document.getElementById('profile-nickname');
+                const avatarInput = document.getElementById('profile-avatar');
+                if(emailEl) emailEl.value = p.email || '';
+                if(nickInput) nickInput.value = p.display_name || '';
+                if(avatarInput) avatarInput.value = p.avatar_url || '';
+                // set gender radio
+                if(p.gender){
+                    const g = p.gender;
+                    const genderRadio = document.querySelectorAll('input[name="profile-gender"]');
+                    if(genderRadio && genderRadio.length){
+                        genderRadio.forEach(r => { if(r.value === g) r.checked = true; else r.checked = false; });
+                    }
+                }
+                // store user_id for client use
+                if(p.user_id) sessionStorage.setItem('user_id', p.user_id);
+            }catch(e){ console.debug('populate profile form', e); }
+    }catch(err){ console.debug('profile load error', err); }
+  }
+
+  async function loadTodos(){
+    try{
+      const list = await apiFetch(`${apiBase}/todos`);
+      const ul = document.querySelector('#page-dashboard ul.space-y-4');
+      if(!ul) return;
+      ul.innerHTML = '';
+      if(list.length === 0){ ul.innerHTML = '<li class="p-4 text-gray-600">오늘의 퀘스트가 없습니다.</li>'; return; }
+      for(const t of list){
+        const li = document.createElement('li');
+        li.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200';
+        const left = document.createElement('div');
+        left.innerHTML = `<div><div class="flex items-center gap-2 mb-1"><span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-800">${t.category || ''}</span></div><span class="font-semibold text-gray-800">${escapeHtml(t.title)}</span><span class="text-sm text-blue-600 font-medium ml-2">+${t.xp_reward} XP</span></div>`;
+        const right = document.createElement('div');
+        right.className = 'flex space-x-2 flex-shrink-0';
+        const completeBtn = document.createElement('button');
+        completeBtn.className = 'bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold hover:bg-blue-200';
+        completeBtn.innerText = '완료';
+        completeBtn.addEventListener('click', async ()=>{
+          try{
+            const res = await apiFetch(`${apiBase}/todos/${t.todo_id}/complete`, { method: 'POST' });
+            await loadProfile();
+            if(res.leveled){ triggerLevelFlash(); }
+            await loadTodos();
+          }catch(err){ console.error(err); alert(err.error || JSON.stringify(err)); }
+        });
+        const delBtn = document.createElement('button');
+        delBtn.className = 'bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-semibold hover:bg-gray-200';
+        delBtn.innerText = '삭제';
+        delBtn.addEventListener('click', async ()=>{
+          try{
+            await apiFetch(`${apiBase}/todos/${t.todo_id}`, { method: 'PATCH', body: JSON.stringify({ deleted_at: new Date().toISOString() }) });
+            await loadTodos();
+          }catch(err){ console.error(err); alert(err.error || JSON.stringify(err)); }
+        });
+        right.appendChild(completeBtn);
+        right.appendChild(delBtn);
+        li.appendChild(left);
+        li.appendChild(right);
+        ul.appendChild(li);
+      }
+    }catch(err){ console.error('loadTodos', err); }
+  }
+
+    // Leaderboard loader
+    async function loadLeaderboard(){
+        try{
+            const list = await apiFetch(`${apiBase}/leaderboard`);
+            const ul = document.getElementById('leaderboard-list');
+            if(!ul) return;
+            ul.innerHTML = '';
+            const currentId = sessionStorage.getItem('user_id') || '';
+            if(!list || list.length === 0){ ul.innerHTML = '<li class="p-4 text-gray-600">참가한 유저가 없습니다.</li>'; return; }
+            for(const p of list){
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200';
+                const left = document.createElement('div');
+                const isMe = (p.user_id === currentId);
+                left.innerHTML = `<div class="flex items-center space-x-4"><span class="text-2xl font-bold">${p.rank <= 3 ? (p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : '🥉') : p.rank}</span><div><div class="font-bold text-lg text-gray-800">${escapeHtml(p.display_name)} ${p.gender === 'male' ? ' (👨)' : p.gender === 'female' ? ' (👩)' : ''} ${isMe ? '(나)' : ''}</div><div class="text-sm text-gray-600">Lv. ${p.level}</div></div></div>`;
+                const right = document.createElement('div');
+                right.className = 'text-lg font-semibold text-gray-700';
+                right.innerText = `${p.current_xp} / ${p.next_level_xp} XP`;
+                li.appendChild(left);
+                li.appendChild(right);
+                ul.appendChild(li);
+            }
+        }catch(err){ console.error('loadLeaderboard', err); }
+    }
+
+    // Load completed todos (for history page)
+    async function loadCompletedTodos(){
+        try{
+            const list = await apiFetch(`${apiBase}/todos?include_completed=true`);
+            const ul = document.querySelector('#page-history ul.space-y-4');
+            if(!ul) return;
+            ul.innerHTML = '';
+            if(!list || list.length === 0){ ul.innerHTML = '<li class="p-4 text-gray-600">완료된 퀘스트가 없습니다.</li>'; return; }
+            for(const t of list){
+                if(!t.is_completed) continue;
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between p-4 bg-gray-100 rounded-lg border border-gray-200 opacity-80';
+                const left = document.createElement('div');
+                const completedAt = t.completed_at ? new Date(t.completed_at).toLocaleString() : '';
+                left.innerHTML = `<div><span class="font-semibold text-gray-600 line-through">${escapeHtml(t.title)}</span> <span class="text-sm text-blue-500 font-medium ml-2">+${t.xp_reward} XP</span> <span class="text-xs text-gray-500 ml-4">(완료: ${completedAt})</span></div>`;
+                const right = document.createElement('div');
+                right.className = 'flex space-x-2';
+                const restoreForm = document.createElement('form'); restoreForm.onsubmit = async (e)=>{ e.preventDefault(); try{ await apiFetch(`${apiBase}/todos/${t.todo_id}`, { method: 'PATCH', body: JSON.stringify({ deleted_at: null, is_completed: 0, completed_at: null }) }); await loadCompletedTodos(); await loadTodos(); }catch(err){ alert(err.error || JSON.stringify(err)); } };
+                const restoreBtn = document.createElement('button');
+                restoreBtn.type='submit';
+                restoreBtn.className = 'bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-semibold hover:bg-gray-300';
+                restoreBtn.innerText = '복구';
+                restoreForm.appendChild(restoreBtn);
+                right.appendChild(restoreForm);
+                li.appendChild(left);
+                li.appendChild(right);
+                ul.appendChild(li);
+            }
+        }catch(err){ console.error('loadCompletedTodos', err); }
+    }
+
+  function escapeHtml(str){ return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function triggerLevelFlash(){
+    const card = document.querySelector('#page-dashboard #user-nickname') || document.getElementById('user-nickname');
+    if(!card) return;
+    card.classList.add('level-up-flash');
+    setTimeout(()=> card.classList.remove('level-up-flash'), 1500);
+  }
+
+  // if token exists, load profile & todos on startup
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    if(sessionStorage.getItem('token')){
+      try{ await loadProfile(); await loadTodos(); showNav(); }catch(e){ console.debug(e); }
+    }
+  });
+
+  // expose for inline template scripts
+        window.app = { loadProfile, loadTodos, loadCompletedTodos, loadLeaderboard, triggerLevelFlash };
+})();
 document.addEventListener('DOMContentLoaded', () => {
     const mainContent = document.getElementById('main-content');
     const authStatus = document.getElementById('auth-status');
@@ -118,18 +349,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const errorEl = document.getElementById('login-error');
 
             try {
+                // The backend expects { email, password } — map username -> email
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ email: username, password })
                 });
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 if (response.ok) {
-                    sessionStorage.setItem('authToken', data.token);
-                    sessionStorage.setItem('authUser', data.username || username);
+                    // store token under both keys for compatibility with other scripts
+                    if (data.token) {
+                        sessionStorage.setItem('token', data.token);
+                        sessionStorage.setItem('authToken', data.token);
+                    }
+                    sessionStorage.setItem('authUser', data.username || username || data.user_id || '');
                     window.location.hash = '/';
                 } else {
-                    errorEl.textContent = data.error || '로그인 실패';
+                    errorEl.textContent = data.error || (data.detail && (data.detail.error || JSON.stringify(data.detail))) || '로그인 실패';
                 }
             } catch (err) {
                 errorEl.textContent = '서버와 통신할 수 없습니다.';
@@ -152,17 +388,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const errorEl = document.getElementById('signup-error');
 
             try {
+                // Backend expects { email, password, display_name }
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
+                    body: JSON.stringify({ email, password, display_name: username })
                 });
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 if (response.ok) {
                     alert('회원가입 성공! 로그인 페이지로 이동합니다.');
                     window.location.hash = '/login';
                 } else {
-                    // FastAPI 422 등의 detail 포맷 대응
+                    // FastAPI error handling
                     if (data && data.detail) {
                         if (typeof data.detail === 'string') {
                             errorEl.textContent = data.detail;
